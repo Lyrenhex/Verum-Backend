@@ -1,0 +1,33 @@
+{
+  "name": "verum",
+  "version": "0.0.1",
+  "description": "A module for client / server / p2p encrypted super-secret communication.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Could you try `npm run server` or `npm run client` please?\"",
+    "server": "node test.js server",
+    "client": "node test.js client"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/freechat-project/Verum-Backend.git"
+  },
+  "keywords": [
+    "encrypted",
+    "client",
+    "server",
+    "peer-to-peer",
+    "communication",
+    "chat"
+  ],
+  "author": "Damian Heaton <dh64784@gmail.com> (damianheaton.com)",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/freechat-project/Verum-Backend/issues"
+  },
+  "homepage": "https://github.com/freechat-project/Verum-Backend#readme",
+  "dependencies": {
+    "nodejs-websocket": "^1.7.1",
+    "openpgp": "^2.3.5"
+  }
+}
