@@ -79,6 +79,9 @@ class Server {
           conn.sendText(that.error("Bad Format", "Unable to parse malformed JSON."));
         }
       });
+      conn.on("close", function(code, reason){
+        console.log("Connection closed.");
+      });
     });
   }
 
