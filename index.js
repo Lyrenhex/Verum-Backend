@@ -67,12 +67,14 @@ class Server {
               }catch(e){
                 conn.sendText(that.error("Unknown User", "That user's data could not be found. Are you sure you're querying the right user on the right Node?"));
               }
+              break;
             case "send_message":
               try {
                 that.Users[json.user].messages.push(json.data);
               }catch(e){
                 conn.sendText(that.error("Unknown User", "That user's data could not be found. Are you sure you're querying the right user on the right Node?"));
               }
+              break;
           }
         }catch(e){
           console.log("Unexpected unparseable string: ", str);
@@ -125,10 +127,13 @@ class Client {
       switch(json.type){
         case "error":
           that.Events.emit("error", json.title, json.data);
+          break;
         case "welcome":
           that.Events.emit("welcome", json.data);
+          break;
         case "public_key":
           that.Events.emit("public_key", that.lastPubKeyRequestee, json.data);
+          break;
       }
     });
   }
