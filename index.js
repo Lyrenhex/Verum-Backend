@@ -76,6 +76,7 @@ class Server {
           }
         }catch(e){
           console.log("Unexpected unparseable string: ", str);
+          console.log(e);
           conn.sendText(that.error("Bad Format", "Unable to parse malformed JSON."));
         }
       });
@@ -123,7 +124,7 @@ class Client {
       var json = JSON.parse(str);
       switch(json.type){
         case "error":
-          that.Events.emit("error", title, data);
+          that.Events.emit("error", json.title, json.data);
         case "welcome":
           that.Events.emit("welcome", json.data);
         case "public_key":
