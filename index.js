@@ -115,14 +115,13 @@ class Client {
 
     var that = this;
 
-    this.websock = ws.connect(`ws://${nodeAddr}:${nodePort}/${nodeDir}`, {port: nodePort}, function(conn){
-      conn.on("text", function(str){
-        var json = JSON.parse(str);
-        switch(json.type){
-          case "src":
-            that.Events.emit("node_source", json.data);
-        }
-      });
+    this.websock = ws.connect(`ws://${nodeAddr}:${nodePort}/${nodeDir}`);
+    this.websock.on("text", function(str){
+      var json = JSON.parse(str);
+      switch(json.type){
+        case "src":
+          that.Events.emit("node_source", json.data);
+      }
     });
   }
 }
