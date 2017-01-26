@@ -54,7 +54,7 @@ class Server {
 
     this.websock = ws.createServer(function(conn){
       console.log("Recorded new connection.");
-      conn.sendText(that.respond("src", that.Config.source));
+      conn.sendText(that.respond("welcome", that.Config.source));
       conn.on("text", function(str){
         // received JSON text string (assumedly). try to parse it, to determine the point of it.
         try {
@@ -87,8 +87,8 @@ class Server {
 
   error (t, s) {
     var obj = {
-      response: "error",
-      type: t,
+      type: "error",
+      title: t,
       data: s
     }
     var err = JSON.stringify(obj);
@@ -115,14 +115,29 @@ class Client {
 
     var that = this;
 
+    this.lastPubKeyRequestee;
+
     this.websock = ws.connect(`ws://${nodeAddr}:${nodePort}/${nodeDir}`);
+    console.log(this.websock);
     this.websock.on("text", function(str){
       var json = JSON.parse(str);
       switch(json.type){
-        case "src":
-          that.Events.emit("node_source", json.data);
+        case "error":
+          that.Events.emit("error", title, data);
+        case "welcome":
+          that.Events.emit("welcome", json.data);
+        case "public_key":
+          that.Events.emit("public_key", that.lastPubKeyRequestee, json.data);
       }
     });
+  }
+
+  getPubKey (requestee) {
+    this.lastPubKeyRequestee = requestee;
+    this.websock.sendText(JSON.stringify({
+      type: "get_pubkey",
+      user: requestee
+    }));
   }
 }
 
