@@ -1,12 +1,12 @@
 {
   "name": "verum",
-  "version": "0.0.1",
+  "version": "0.0.1b",
   "description": "A module for client / server / p2p encrypted super-secret communication.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Could you try `npm run server` or `npm run client` please?\"",
-    "server": "node test.js server",
-    "client": "node test.js client"
+    "server": "node server-test.js",
+    "client": "node test.js"
   },
   "repository": {
     "type": "git",

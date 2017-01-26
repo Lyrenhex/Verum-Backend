@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 const pgp = require("openpgp");
 const ws = require("nodejs-websocket");
 const fs = require("fs");
+const eventEmitter = require("events");
 
 /*
 Server Stuff
@@ -30,10 +31,12 @@ class Server {
   Config.public determines whether the server accepts new registrations.
   Config.source is a *required value* if the Server has modified source code from that provided by the FreeChat Project, as per the terms of the GNU Affero General Public License.
   */
-  constructor (port = 9873, config = {
-    public: true,
-    source: "https://github.com/freechat-project/Verum-Server"
-  }) {
+  constructor (port = 9873, config = null) {
+    if (config === null) config = {
+      public: true,
+      source: "https://github.com/freechat-project/Verum-Server"
+    }
+    this.Config = config;
     this.Users = {};
     var that = this;
     fs.readFile ("users.json", (err, data) => {
@@ -51,6 +54,7 @@ class Server {
 
     this.websock = ws.createServer(function(conn){
       console.log("Recorded new connection.");
+      conn.sendText(that.respond("src", that.Config.source));
       conn.on("text", function(str){
         // received JSON text string (assumedly). try to parse it, to determine the point of it.
         try {
@@ -59,7 +63,7 @@ class Server {
           switch(json.type){
             case "get_pubkey":
               try {
-                conn.sendText(this.respond("public_key", that.Users[json.user].pubkey));
+                conn.sendText(that.respond("public_key", that.Users[json.user].pubkey));
               }catch(e){
                 conn.sendText(this.error("Unknown User", "That user's data could not be found. Are you sure you're querying the right user on the right Node?"));
               }
@@ -67,15 +71,15 @@ class Server {
               try {
                 that.Users[json.user].messages.push(json.data);
               }catch(e){
-                conn.sendText(this.error("Unknown User", "That user's data could not be found. Are you sure you're querying the right user on the right Node?"));
+                conn.sendText(that.error("Unknown User", "That user's data could not be found. Are you sure you're querying the right user on the right Node?"));
               }
           }
         }catch(e){
           console.log("Unexpected unparseable string: ", str);
-          conn.sendText(this.error("Bad Format", "Unable to parse malformed JSON."));
+          conn.sendText(that.error("Bad Format", "Unable to parse malformed JSON."));
         }
       });
-    }).listen(port);
+    });
   }
 
   error (t, s) {
@@ -93,7 +97,7 @@ class Server {
       data: d
     }
     var response = JSON.stringify(obj);
-    return reponse;
+    return response;
   }
 }
 
@@ -101,8 +105,22 @@ class Server {
 Client Stuff
 */
 class Client {
-  constructor () {
+  constructor (nodeAddr, nodePort=9873, nodeDir="") {
+    class Events extends eventEmitter {}
 
+    this.Events = new Events();
+
+    var that = this;
+
+    this.websock = ws.connect(`ws://${nodeAddr}:${nodePort}/${nodeDir}`, {port: nodePort}, function(conn){
+      conn.on("text", function(str){
+        var json = JSON.parse(str);
+        switch(json.type){
+          case "src":
+            that.Events.emit("node_source", json.data);
+        }
+      });
+    });
   }
 }
 
