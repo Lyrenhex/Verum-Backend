@@ -65,7 +65,7 @@ class Server {
               try {
                 conn.sendText(that.respond("public_key", that.Users[json.user].pubkey));
               }catch(e){
-                conn.sendText(this.error("Unknown User", "That user's data could not be found. Are you sure you're querying the right user on the right Node?"));
+                conn.sendText(that.error("Unknown User", "That user's data could not be found. Are you sure you're querying the right user on the right Node?"));
               }
             case "send_message":
               try {

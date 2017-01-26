@@ -12,6 +12,9 @@ client.Events.on('welcome', (address) => {
 client.Events.on('public_key', (user, key) => {
   console.log(`${user}'s public key: ${key}`);
 });
+client.Events.on('error', (err, ext) => {
+  console.log("ERROR", err, ext);
+});
 /* client.sendText(JSON.stringify({
   type: "get_pubkey",
   user: "Scratso"
