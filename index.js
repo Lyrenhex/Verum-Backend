@@ -40,7 +40,8 @@ class Server {
     this.Users = {};
     var that = this;
     this.saveData = function() {
-      var json = JSON.stringify(this.Users, null, 2);
+      var json = JSON.stringify(that.Users, null, 2);
+      console.log("Saving user data. Please avoid server closing.");
       fs.writeFile("users.json", json, (err) => {
         if (err)
           console.log("Unable to save users.json: ", err);
