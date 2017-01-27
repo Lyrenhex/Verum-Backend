@@ -77,7 +77,7 @@ class Server {
               break;
             case "user_register":
               if(!that.Users.hasOwnProperty(json.user)) {
-                this.Users[json.user] = {
+                that.Users[json.user] = {
                   password: json.pass,
                   messages: []
                 }
