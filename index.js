@@ -60,7 +60,7 @@ class Server {
         }
       }
 
-      setInterval(that.saveData(), 300000); // save user data persistently every five minutes.
+      setInterval(that.saveData, 300000); // save user data persistently every five minutes.
     });
 
     this.websock = ws.createServer(function(conn){
