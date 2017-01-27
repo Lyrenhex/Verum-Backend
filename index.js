@@ -36,7 +36,6 @@ class Server {
       public: true,
       source: "https://github.com/freechat-project/Verum-Server"
     }
-    fs.readFile("config.json", )
     this.Config = config;
     this.Users = {};
     var that = this;
