@@ -26,12 +26,12 @@ Server Stuff
 */
 class Server {
   /*
-  Construct the server class. This may be optionally provided a port (default 9873) and configuration options.
+  Construct the server class. This may be optionally provided a configuration options object.
 
   Config.public determines whether the server accepts new registrations.
-  Config.source is a *required value* if the Server has modified source code from that provided by the FreeChat Project, as per the terms of the GNU Affero General Public License.
+  Config.source is a *required value* if the Server has modified source code from that provided by the FreeChat Project, as per the terms of the GNU Affero General Public License, and should be a link to the Node's source code.
   */
-  constructor (port = 9873, config = null) {
+  constructor (config = null) {
     if (config === null) config = {
       public: true,
       source: "https://github.com/freechat-project/Verum-Server"
@@ -75,6 +75,9 @@ class Server {
             case "get_pubkey":
               try {
                 conn.sendText(that.respond("public_key", that.Users[json.user].pubkey));
+                if(that.Users[json.user].pubkey === undefined){
+                  conn.sendText(that.error("User Missing Public Key", "The requested user appears to have no public key attached to their account: most likely, they registered their account with missing information. It's advised that you ask them to set their public key."));
+                }
               }catch(e){
                 conn.sendText(that.error("Unknown User", "That user's data could not be found. Are you sure you're querying the right user on the right Node?"));
               }
@@ -93,9 +96,20 @@ class Server {
                   pubkey: json.pubkey,
                   messages: []
                 }
-                conn.sendText(that.respond("registered", "Successfully creatured user."));
+                conn.sendText(that.respond("registered", "Successfully created user."));
               }else{
                 conn.sendText(that.error("User Already Exists", "A user with that name already exists on this Node. You can either pick a different username, or try a different Node."));
+              }
+            case "user_update_key":
+              if(that.Users.hasOwnProperty(json.user)) {
+                if(that.Users[json.user].password === json.pass){
+                  that.Users[json.user].pubkey = json.pubkey;
+                  conn.sendText(that.respond("updated", "Successfully updated public key."));
+                }else{
+                  conn.sendText(that.error("Incorrect Password", "The password provided to authenticate the requested operation does not match the password tied to this account. The operation was not completed."));
+                }
+              }else{
+                conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
               }
           }
         }catch(e){
@@ -166,6 +180,14 @@ class Client {
   register (username, password, publicKey) {
     this.websock.sendText(JSON.stringify({
       type: "user_register",
+      user: username,
+      pubkey: publicKey,
+      pass: password
+    }));
+  }
+  updatePubKey (username, password, publicKey) {
+    this.websock.sendText(JSON.stringify({
+      type: "user_update_key",
       user: username,
       pubkey: publicKey,
       pass: password

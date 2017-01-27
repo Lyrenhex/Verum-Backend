@@ -17,7 +17,11 @@ client.Events.on('registered', (welcome) => {
 });
 client.Events.on('error', (err, ext) => {
   console.log("ERROR", err, ext);
-  if (err === "Unknown User")
-    client.register ("Scratso", "dummypass");
+  if (err === "Unknown User"){
+    client.register ("Scratso", "dummypass", "THIS HERE BE A DUMMY PUBLIC KEY :)");
     client.getPubKey("Scratso");
+  } else if (err == "User Missing Public Key") {
+    client.updatePubKey ("Scratso", "dummypass", "THIS HERE BE A DUMMY PUBLIC KEY :>");
+    client.getPubKey("Scratso");
+  }
 });
