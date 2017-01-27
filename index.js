@@ -79,6 +79,7 @@ class Server {
               if(!that.Users.hasOwnProperty(json.user)) {
                 that.Users[json.user] = {
                   password: json.pass,
+                  pubkey: json.pubkey,
                   messages: []
                 }
                 conn.sendText(that.respond("registered", "Successfully creatured user."));
@@ -121,7 +122,7 @@ class Server {
 Client Stuff
 */
 class Client {
-  constructor (nodeAddr, nodePort=9873, nodeDir="") {
+  constructor (nodeAddr, nodePort=9873) {
     class Events extends eventEmitter {}
 
     this.Events = new Events();
@@ -151,10 +152,11 @@ class Client {
     });
   }
 
-  register (username, password) {
+  register (username, password, publicKey) {
     this.websock.sendText(JSON.stringify({
       type: "user_register",
       user: username,
+      pubkey: publicKey,
       pass: password
     }));
   }

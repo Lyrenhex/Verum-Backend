@@ -19,4 +19,5 @@ client.Events.on('error', (err, ext) => {
   console.log("ERROR", err, ext);
   if (err === "Unknown User")
     client.register ("Scratso", "dummypass");
+    client.getPubKey("Scratso");
 });
