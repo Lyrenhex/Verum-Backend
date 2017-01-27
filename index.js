@@ -41,7 +41,7 @@ class Server {
     var that = this;
     fs.readFile ("users.json", (err, data) => {
       if (err)
-        console.log("Error accessing persistent user data. Probably just nonexistant file?");
+        console.log("Error accessing persistent user data. Probably just nonexistant file?", err);
       else {
         var json = JSON.parse(data);
         var user;
@@ -50,6 +50,8 @@ class Server {
           that.Users[user] = user;
         }
       }
+
+      setInterval(this.saveData(), 300000); // save user data persistently every five minutes.
     });
 
     this.websock = ws.createServer(function(conn){
@@ -115,6 +117,16 @@ class Server {
     }
     var response = JSON.stringify(obj);
     return response;
+  }
+
+  saveData () {
+    var json = JSON.stringify(this.Users, null, 2);
+    fs.writeFile("users.json", json, (err) => {
+      if (err)
+        console.log("Unable to save users.json: ", err);
+      else
+        console.log("Saved user data.");
+    });
   }
 }
 
