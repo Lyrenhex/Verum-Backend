@@ -36,6 +36,7 @@ class Server {
       public: true,
       source: "https://github.com/freechat-project/Verum-Server"
     }
+    fs.readFile("config.json", )
     this.Config = config;
     this.Users = {};
     var that = this;
@@ -75,6 +76,16 @@ class Server {
                 conn.sendText(that.error("Unknown User", "That user's data could not be found. Are you sure you're querying the right user on the right Node?"));
               }
               break;
+            case "user_register":
+              if(that.Users.indexOf(json.user) !== -1) {
+                this.Users[json.user] = {
+                  password: json.pass,
+                  messages: []
+                }
+                conn.sendText(that.respond("registered", "Successfully creatured user."));
+              }else{
+                conn.sendText(that.error("User Already Exists", "A user with that name already exists on this Node. You can either pick a different username, or try a different Node."));
+              }
           }
         }catch(e){
           console.log("Unexpected unparseable string: ", str);
@@ -120,7 +131,7 @@ class Client {
 
     this.lastPubKeyRequestee;
 
-    this.websock = ws.connect(`ws://${nodeAddr}:${nodePort}/${nodeDir}`);
+    this.websock = ws.connect(`ws://${nodeAddr}:${nodePort}`);
     console.log(this.websock);
     this.websock.on("text", function(str){
       var json = JSON.parse(str);
@@ -134,8 +145,19 @@ class Client {
         case "public_key":
           that.Events.emit("public_key", that.lastPubKeyRequestee, json.data);
           break;
+        case "registered":
+          that.Events.emit("registered", json.data);
+          break;
       }
     });
+  }
+
+  register (username, password) {
+    this.websock.sendText(JSON.stringify({
+      type: "user_register",
+      user: username,
+      pass: password
+    }));
   }
 
   getPubKey (requestee) {

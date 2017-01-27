@@ -4,7 +4,7 @@ console.log("Initialising test client.")
 
 var pubUsr;
 
-var client = new verumClient("138.68.133.247");
+var client = new verumClient("devel.node.verum.damianheaton.com");
 client.Events.on('welcome', (address) => {
   console.log("Node source: ", address);
   client.getPubKey("Scratso");
@@ -12,10 +12,11 @@ client.Events.on('welcome', (address) => {
 client.Events.on('public_key', (user, key) => {
   console.log(`${user}'s public key: ${key}`);
 });
+client.Events.on('registered', (welcome) => {
+  console.log("Registered successfully: ", welcome);
+});
 client.Events.on('error', (err, ext) => {
   console.log("ERROR", err, ext);
+  if (err === "Unknown User")
+    client.register (Scratso, dummypass);
 });
-/* client.sendText(JSON.stringify({
-  type: "get_pubkey",
-  user: "Scratso"
-})); */
