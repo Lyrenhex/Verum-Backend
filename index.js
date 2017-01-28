@@ -56,7 +56,7 @@ class Server {
         var json = JSON.parse(data);
         var user;
         for(user in json){
-          userData = json[user];
+          var userData = json[user];
           that.Users[user] = userData;
         }
       }
