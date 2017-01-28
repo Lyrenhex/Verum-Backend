@@ -59,7 +59,7 @@ class Server {
           user = json[user];
           that.Users[user] = user;
         }
-        console.log("Loaded users");
+        console.log("Loaded users", that.Users);
       }
 
       setInterval(that.saveData, 300000); // save user data persistently every five minutes.
