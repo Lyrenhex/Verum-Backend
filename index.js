@@ -219,9 +219,8 @@ class Client {
   }
 
   sendEncMsg (recipient, message, from) {
-    var classThis = this;
-    this.Events.on('public_key', (user, key) => {
-      var that = this;
+    var that = this;
+    this.Events.on('public_key', function sendEncMsg2 (user, key) {
       if(user === recipient){
         var options = {
           data: message,
@@ -229,13 +228,13 @@ class Client {
         }
 
         pgp.encrypt(options).then(function(ciphertext){
-          classThis.websock.sendText(JSON.stringify({
+          that.websock.sendText(JSON.stringify({
             type: "message_send",
             user: recipient,
             msg: ciphertext,
             from: from
           }));
-          classThis.Events.removeListener('public_key', that); // listener's served its purpose; destroy it.
+          that.Events.removeListener('public_key', sendEncMsg2); // listener's served its purpose; destroy it.
         });
       }
     });
