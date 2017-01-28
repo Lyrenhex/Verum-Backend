@@ -220,7 +220,7 @@ class Client {
 
   sendEncMsg (recipient, message, from) {
     var classThis = this;
-    this.Events.on('public_key', user, key){
+    this.Events.on('public_key', (user, key) => {
       var that = this;
       if(user === recipient){
         var options = {
@@ -238,7 +238,7 @@ class Client {
           classThis.Events.removeListener('public_key', that); // listener's served its purpose; destroy it.
         });
       }
-    }
+    });
     this.getPubKey(recipient);
   }
 }
