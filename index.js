@@ -21,6 +21,8 @@ const ws = require("nodejs-websocket");
 const fs = require("fs");
 const eventEmitter = require("events");
 
+pgp.config.aead_protect = true;
+
 /*
 Server Stuff
 */
@@ -112,6 +114,16 @@ class Server {
               }else{
                 conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
               }
+            case "message_send":
+              if(that.Users.hasOwnProperty(json.user)) {
+                that.Users[json.user].messages.push({
+                  message: json.msg,
+                  sender: json.from
+                });
+                conn.sendText(that.respond("sent", "Message sent successfully."));
+              }else{
+                conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
+              }
           }
         }catch(e){
           console.log("Unexpected unparseable string: ", str);
@@ -174,6 +186,9 @@ class Client {
         case "registered":
           that.Events.emit("registered", json.data);
           break;
+        case "sent":
+          that.Events.emit("message_sent", json.data);
+          break;
       }
     });
   }
@@ -201,6 +216,30 @@ class Client {
       type: "get_pubkey",
       user: requestee
     }));
+  }
+
+  sendEncMsg (recipient, message, from) {
+    var classThis = this;
+    this.Events.on('public_key', user, key){
+      var that = this;
+      if(user === recipient){
+        var options = {
+          data: message,
+          publicKeys: pgp.key.readArmored(key).keys
+        }
+
+        pgp.encrypt(options).then(function(ciphertext){
+          classThis.websock.sendText(JSON.stringify({
+            type: "message_send",
+            user: recipient,
+            msg: ciphertext,
+            from: from
+          }));
+          classThis.Events.removeListener('public_key', that); // listener's served its purpose; destroy it.
+        });
+      }
+    }
+    this.getPubKey(recipient);
   }
 }
 
