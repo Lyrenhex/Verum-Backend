@@ -21,10 +21,8 @@ client.Events.on('error', (err, ext) => {
   console.log("ERROR", err, ext);
   if (err === "Unknown User"){
     client.register ("Scratso", "dummypass", pubKey);
-    client.getPubKey("Scratso");
   } else if (err == "User Missing Public Key") {
     client.updatePubKey ("Scratso", "dummypass", pubKey);
-    client.getPubKey("Scratso");
   }
   client.sendEncMsg("Scratso", "Yo, this is an encrypted test message. :)", "Scratso@devel.node.verum.damianheaton.com");
 });

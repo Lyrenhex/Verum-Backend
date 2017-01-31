@@ -227,6 +227,7 @@ class Client {
           publicKeys: pgp.key.readArmored(key).keys
         }
 
+        console.log("Encrypting message...");
         pgp.encrypt(options).then(function(ciphertext){
           that.websock.sendText(JSON.stringify({
             type: "message_send",
