@@ -100,15 +100,19 @@ class Server {
               }
               break;
             case "user_register":
-              if(!that.Users.hasOwnProperty(json.user)) {
-                that.Users[json.user] = {
-                  password: json.pass,
-                  pubkey: json.pubkey,
-                  messages: []
+              if(that.Config.public){
+                if(!that.Users.hasOwnProperty(json.user)) {
+                  that.Users[json.user] = {
+                    password: json.pass,
+                    pubkey: json.pubkey,
+                    messages: []
+                  }
+                  conn.sendText(that.respond("registered", "Successfully created user."));
+                }else{
+                  conn.sendText(that.error("User Already Exists", "A user with that name already exists on this Node. You can either pick a different username, or try a different Node."));
                 }
-                conn.sendText(that.respond("registered", "Successfully created user."));
               }else{
-                conn.sendText(that.error("User Already Exists", "A user with that name already exists on this Node. You can either pick a different username, or try a different Node."));
+                conn.sendText(that.error("Private Node", "This Node has been configured to not be public, meaning that it is not accepting user registrations. Perhaps try join a different Node?"));
               }
             case "user_update_key":
               if(that.Users.hasOwnProperty(json.user)) {
