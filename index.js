@@ -135,6 +135,27 @@ class Server {
               }else{
                 conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
               }
+            case "messages_get":
+              if(that.Users.hasOwnProperty(json.user)) {
+                if(that.Users[json.user].password === json.pass){
+                  conn.sendText(that.respond("messages", that.Users[json.user].messages));
+                }else{
+                  conn.sendText(that.error("Incorrect Password", "The password provided to authenticate the requested operation does not match the password tied to this account. The operation was not completed."));
+                }
+              }else{
+                conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
+              }
+            case "messages_got":
+              if(that.Users.hasOwnProperty(json.user)) {
+                if(that.Users[json.user].password === json.pass){
+                  that.Users[json.user].messages = []; // we're compliant: kill the message archives.
+                  that.saveData(); // and force an asynchronous data save: otherwise, the data is still there until the next save, which *we do not want!*
+                }else{
+                  conn.sendText(that.error("Incorrect Password", "The password provided to authenticate the requested operation does not match the password tied to this account. The operation was not completed."));
+                }
+              }else{
+                conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
+              }
           }
         }catch(e){
           console.log("Unexpected unparseable string: ", str);
@@ -200,6 +221,9 @@ class Client {
         case "sent":
           that.Events.emit("message_sent", json.data);
           break;
+        case "messages":
+          that.Events.emit("messages_recv", json.data);
+          break;
       }
     });
   }
@@ -217,6 +241,20 @@ class Client {
       type: "user_update_key",
       user: username,
       pubkey: publicKey,
+      pass: password
+    }));
+  }
+  getMessages (username, password) {
+    this.websock.sendText(JSON.stringify({
+      type: "messages_get",
+      user: username,
+      pass: password
+    }));
+  }
+  gotMessages (username, password) {
+    this.websock.sendText(JSON.stringify({
+      type: "messages_got",
+      user: username,
       pass: password
     }));
   }
@@ -251,6 +289,16 @@ class Client {
       }
     });
     this.getPubKey(recipient);
+  }
+  getEncMsgs (username, password) {
+    var that = this;
+    this.Events.on('messages_recv', function gotEncMsgs (messages) {
+      messages.forEach((message, index) => {
+        that.Events.emit("message_new", ciphertext, from); // we aren't gonna handle decryption; that should definitely be done by the client in question.
+      });
+      that.gotMessages(username, password);
+    });
+    this.getMessages(username, password);
   }
 }
 

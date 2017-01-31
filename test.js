@@ -9,7 +9,10 @@ var pubKey = "-----BEGIN PGP PUBLIC KEY BLOCK----- mQINBFhok7MBEAC7fm1Kzwln2KBn9
 var client = new verumClient("devel.node.verum.damianheaton.com");
 client.Events.on('welcome', (address) => {
   console.log("Node source: ", address);
-  client.getPubKey("Scratso");
+  client.getEncMsgs("Scratso", "dummypass");
+});
+client.Events.on('message', (ciphertext, from) => {
+  console.log(`Received message from ${from}: ${ciphertext}`);
 });
 client.Events.on('public_key', (user, key) => {
   console.log(`${user}'s public key: ${key}`);
