@@ -9,6 +9,7 @@ var pubKey = "-----BEGIN PGP PUBLIC KEY BLOCK----- mQINBFhok7MBEAC7fm1Kzwln2KBn9
 var client = new verumClient("devel.node.verum.damianheaton.com");
 client.Events.on('welcome', (address) => {
   console.log("Node source: ", address);
+  client.sendEncMsg("Scratso", "yo, this here be another test :)", "Scratso@devel.node.verum.damianheaton.com");
   client.getEncMsgs("Scratso", "dummypass");
 });
 client.Events.on('message', (ciphertext, from) => {

@@ -33,12 +33,13 @@ class Server {
   Config.public determines whether the server accepts new registrations.
   Config.source is a *required value* if the Server has modified source code from that provided by the FreeChat Project, as per the terms of the GNU Affero General Public License, and should be a link to the Node's source code.
   */
-  constructor (config = null) {
+  constructor (port = 9873, config = null) {
     if (config === null) config = {
       public: true,
-      source: "https://github.com/freechat-project/Verum-Server"
+      source: "https://github.com/freechat-project/Verum-Server",
     }
     this.Config = config;
+    this.Config.port = port;
     this.Users = {};
     var that = this;
     this.saveData = function() {
@@ -186,6 +187,10 @@ class Server {
     var response = JSON.stringify(obj);
     return response;
   }
+
+  listen () {
+    this.websock.listen(this.Config.port);
+  }
 }
 
 /*
@@ -294,7 +299,7 @@ class Client {
     var that = this;
     this.Events.on('messages_recv', function gotEncMsgs (messages) {
       messages.forEach((message, index) => {
-        that.Events.emit("message_new", ciphertext, from); // we aren't gonna handle decryption; that should definitely be done by the client in question.
+        that.Events.emit("message_new", message.msg, message.from); // we aren't gonna handle decryption; that should definitely be done by the client in question.
       });
       that.gotMessages(username, password);
     });
