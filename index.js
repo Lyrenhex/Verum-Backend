@@ -43,12 +43,19 @@ class Server {
     var that = this;
     this.saveData = function() {
       var json = JSON.stringify(that.Users, null, 2);
-      console.log("Saving user data. Please avoid server closing.");
+      console.log("Saving data. Please avoid server closing.");
       fs.writeFile("users.json", json, (err) => {
         if (err)
           console.log("Unable to save users.json: ", err);
         else
           console.log("Saved user data.");
+      });
+      var confJson = JSON.stringify(that.Config, null, 2);
+      fs.writeFile("conf.json", confJson, (err) => {
+        if (err)
+          console.log("Unable to save conf.json: ", err);
+        else
+          console.log("Saved config data.");
       });
     }
     fs.readFile ("users.json", (err, data) => {
