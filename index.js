@@ -115,6 +115,7 @@ class Server {
               }else{
                 conn.sendText(that.error("Private Node", "This Node has been configured to not be public, meaning that it is not accepting user registrations. Perhaps try join a different Node?"));
               }
+              break;
             case "user_update_key":
               if(that.Users.hasOwnProperty(json.user)) {
                 if(that.Users[json.user].password === json.pass){
@@ -126,6 +127,7 @@ class Server {
               }else{
                 conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
               }
+              break;
             case "message_send":
               if(that.Users.hasOwnProperty(json.user)) {
                 that.Users[json.user].messages.push({
@@ -136,6 +138,7 @@ class Server {
               }else{
                 conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
               }
+              break;
             case "messages_get":
               if(that.Users.hasOwnProperty(json.user)) {
                 if(that.Users[json.user].password === json.pass){
@@ -146,6 +149,7 @@ class Server {
               }else{
                 conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
               }
+              break;
             case "messages_got":
               if(that.Users.hasOwnProperty(json.user)) {
                 if(that.Users[json.user].password === json.pass){
@@ -157,6 +161,7 @@ class Server {
               }else{
                 conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
               }
+              break;
           }
         }catch(e){
           console.log("Unexpected unparseable string: ", str);

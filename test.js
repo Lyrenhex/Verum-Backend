@@ -28,5 +28,4 @@ client.Events.on('error', (err, ext) => {
   } else if (err == "User Missing Public Key") {
     client.updatePubKey ("Scratso", "dummypass", pubKey);
   }
-  client.sendEncMsg("Scratso", "Yo, this is an encrypted test message. :)", "Scratso@devel.node.verum.damianheaton.com");
 });
