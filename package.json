@@ -4,7 +4,7 @@
   "description": "A module for client / server / p2p encrypted super-secret communication.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Could you try `npm run server` or `npm run client` please?\"",
+    "test": "node server-test.js --travis-ci && node test.js --travis-ci",
     "server": "node server-test.js",
     "client": "node test.js"
   },

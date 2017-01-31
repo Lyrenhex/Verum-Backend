@@ -304,7 +304,7 @@ class Client {
     var that = this;
     this.Events.on('messages_recv', function gotEncMsgs (messages) {
       messages.forEach((message, index) => {
-        that.Events.emit("message_new", message.msg, message.from); // we aren't gonna handle decryption; that should definitely be done by the client in question.
+        that.Events.emit("message", message.message.data, message.sender); // we aren't gonna handle decryption; that should definitely be done by the client in question.
       });
       that.gotMessages(username, password);
     });
