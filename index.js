@@ -130,9 +130,11 @@ class Server {
               break;
             case "message_send":
               if(that.Users.hasOwnProperty(json.user)) {
+                var time = new Date();
                 that.Users[json.user].messages.push({
                   message: json.msg,
-                  sender: json.from
+                  sender: json.from,
+                  timestamp: time
                 });
                 conn.sendText(that.respond("sent", "Message sent successfully."));
               }else{
@@ -328,7 +330,7 @@ class Client {
           senderSrvClient.getPubKey(message.sender.split("@")[0]);
         });
         function next () {
-          that.Events.emit("message", message.message.data, message.sender, senderPubKey); // we aren't gonna handle decryption; that should definitely be done by the client in question.
+          that.Events.emit("message", message.message.data, message.sender, message.timestamp, senderPubKey); // we aren't gonna handle decryption; that should definitely be done by the client in question.
           senderSrvClient = undefined;
         }
       });
