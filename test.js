@@ -8,7 +8,7 @@ var pubKey = "-----BEGIN PGP PUBLIC KEY BLOCK----- mQINBFhok7MBEAC7fm1Kzwln2KBn9
 
 var client = new verumClient("devel.node.verum.damianheaton.com");
 client.Events.on('message', (ciphertext, from, timestamp, pubKey) => {
-  console.log(`[${timestamp} Received message from ${from}, which has a public key of ${pubKey}: ${ciphertext}`);
+  console.log(`[${timestamp}] Received message from ${from}, which has a public key of ${pubKey}: ${ciphertext}`);
 });
 client.Events.on('welcome', (address) => {
   console.log("Node source: ", address);
