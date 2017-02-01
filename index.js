@@ -202,7 +202,10 @@ class Server {
 Client Stuff
 */
 class Client {
-  constructor (nodeAddr, nodePort=9873) {
+  constructor (nodeAddr, nodePort=null) {
+    if (!nodePort)
+      nodePort = 9873;
+
     class Events extends eventEmitter {}
 
     this.Events = new Events();
@@ -277,13 +280,14 @@ class Client {
     }));
   }
 
-  sendEncMsg (recipient, message, from) {
+  sendEncMsg (recipient, message, from, secretKey) {
     var that = this;
     this.Events.on('public_key', function sendEncMsg2 (user, key) {
       if(user === recipient){
         var options = {
           data: message,
-          publicKeys: pgp.key.readArmored(key).keys
+          publicKeys: pgp.key.readArmored(key).keys,
+          privateKeys: pgp.key.readArmored(secretKey).keys // we must sign the message, to prove to the recipient that this was sent by me and not an impostor.
         }
 
         console.log("Encrypting message...");
@@ -304,7 +308,29 @@ class Client {
     var that = this;
     this.Events.on('messages_recv', function gotEncMsgs (messages) {
       messages.forEach((message, index) => {
-        that.Events.emit("message", message.message.data, message.sender); // we aren't gonna handle decryption; that should definitely be done by the client in question.
+        var senderPubKey = null;
+        var senderNode = message.sender.split("@")[1].split(":");
+        console.log(senderNode);
+        var senderSrvClient = new Client(senderNode[0], (senderNode[1] !== undefined) ? senderNode[1] : null); // create a client connection to the sender's Node.
+        senderSrvClient.Events.on('public_key', function (user, key) {
+          if(user === message.sender.split("@")[0]){
+            senderPubKey = key;
+            next();
+          }
+        });
+        senderSrvClient.Events.on('error', function(err, ext){
+          if (err === "Unknown User") {
+            console.log(err, ext, "As the identity could not be verified, this may well be spam.");
+          }
+          next();
+        });
+        senderSrvClient.Events.on('welcome', function (address){
+          senderSrvClient.getPubKey(message.sender.split("@")[0]);
+        });
+        function next () {
+          that.Events.emit("message", message.message.data, message.sender, senderPubKey); // we aren't gonna handle decryption; that should definitely be done by the client in question.
+          senderSrvClient = undefined;
+        }
       });
       that.gotMessages(username, password);
     });
