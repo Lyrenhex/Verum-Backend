@@ -90,14 +90,14 @@ class Server {
                   conn.sendText(that.error("User Missing Public Key", "The requested user appears to have no public key attached to their account: most likely, they registered their account with missing information. It's advised that you ask them to set their public key."));
                 }
               }catch(e){
-                conn.sendText(that.error("Unknown User", "That user's data could not be found. Are you sure you're querying the right user on the right Node?"));
+                conn.sendText(that.error("User Doesn't Exist", "That user's data could not be found. Are you sure you're querying the right user on the right Node?"));
               }
               break;
             case "send_message":
               try {
                 that.Users[json.user].messages.push(json.data);
               }catch(e){
-                conn.sendText(that.error("Unknown User", "That user's data could not be found. Are you sure you're querying the right user on the right Node?"));
+                conn.sendText(that.error("User Doesn't Exist", "That user's data could not be found. Are you sure you're querying the right user on the right Node?"));
               }
               break;
             case "user_register":
