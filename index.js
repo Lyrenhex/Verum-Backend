@@ -20,6 +20,7 @@ const pgp = require("openpgp");
 const ws = require("nodejs-websocket");
 const fs = require("fs");
 const eventEmitter = require("events");
+const passhash = require("password-hash");
 
 pgp.config.aead_protect = true;
 
@@ -64,6 +65,12 @@ class Server {
         var user;
         for(user in json){
           var userData = json[user];
+
+          if (!passhash.isHashed(userData.password)){
+            // user's password is NOT Hashed -- hash it now (retroactively)
+            userData.password = passhash.generate(userData.password);
+          }
+
           that.Users[user] = userData;
         }
       }
@@ -99,7 +106,7 @@ class Server {
               if(that.Config.public){
                 if(!that.Users.hasOwnProperty(json.user)) {
                   that.Users[json.user] = {
-                    password: json.pass,
+                    password: passhash.generate(json.pass),
                     pubkey: json.pubkey,
                     messages: []
                   }
@@ -113,7 +120,7 @@ class Server {
               break;
             case "user_update_key":
               if(that.Users.hasOwnProperty(json.user)) {
-                if(that.Users[json.user].password === json.pass){
+                if(passhash.verify(json.pass, that.Users[json.user].password)){
                   that.Users[json.user].pubkey = json.pubkey;
                   conn.sendText(that.respond("updated", "Successfully updated public key."));
                 }else{
@@ -138,7 +145,7 @@ class Server {
               break;
             case "messages_get":
               if(that.Users.hasOwnProperty(json.user)) {
-                if(that.Users[json.user].password === json.pass){
+                if(passhash.verify(json.pass, that.Users[json.user].password)){
                   conn.sendText(that.respond("messages", that.Users[json.user].messages));
                 }else{
                   conn.sendText(that.error("Incorrect Password", "The password provided to authenticate the requested operation does not match the password tied to this account. The operation was not completed."));
@@ -149,7 +156,7 @@ class Server {
               break;
             case "messages_got":
               if(that.Users.hasOwnProperty(json.user)) {
-                if(that.Users[json.user].password === json.pass){
+                if(passhash.verify(json.pass, that.Users[json.user].password)){
                   that.Users[json.user].messages = []; // we're compliant: kill the message archives.
                   that.saveData(); // and force an asynchronous data save: otherwise, the data is still there until the next save, which *we do not want!*
                 }else{
