@@ -1,6 +1,6 @@
 {
   "name": "verum",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A module for client / server / p2p encrypted super-secret communication.",
   "main": "index.js",
   "scripts": {
@@ -28,6 +28,7 @@
   "homepage": "https://github.com/freechat-project/Verum-Backend#readme",
   "dependencies": {
     "nodejs-websocket": "^1.7.1",
-    "openpgp": "^2.3.5"
+    "openpgp": "^2.3.5",
+    "password-hash": "^1.2.2"
   }
 }
