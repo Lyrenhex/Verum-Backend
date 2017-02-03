@@ -84,11 +84,11 @@ The Node may raise an `error` Event if the recipient could not be found on the N
 
 The Node will raise a `message_sent` Event if / when the message has been sent (however, there is **no notification** of when the Recipient retrieves or reads the message; `sent` Events are raised when the Node has logged the message.)
 
-### `Client.getEncMsgs (username, password)`
+### `Client.getEncMsgs (username, password, secretKey=null)`
 
 This will attempt to retrieve your unread messages from the Node, authorised by your `username` and `password` provided. Be aware that, once the messages are retrieved, all compliant clients will report the retrieval to the Node, to which all compliant Nodes will subsequently **permanently delete the messages**. (This method does this process for you.)
 
-This method **DOES NOT** decrypt or verify the signature of any messages: this should be done by the larger client, as Verum attempts to avoid Secret Keys as much as possible (partly for security, partly for simplicity).
+This method **DOES NOT** decrypt or verify the signature of any messages: this should be done by the larger client, as Verum attempts to avoid Secret Keys as much as possible (partly for security, partly for simplicity). (**correction:** as of version 1.2.0, `Client.getEncMsgs` includes an optional `secretKey` parameter. If this is specified, the messages will be decrypted with the provided secret key. A successfully decrypted message will raise a `message_decrypted` Event.)
 
 The Node may raise an `error` Event if the password is incorrect (`Incorrect Password`) or if the user does not exist on the Node (`User Doesn't Exist`).
 
@@ -137,3 +137,12 @@ This Event is raised when a message sent by the Client has been successfully rec
 This Event is raised when a message is received from the Node (after the client has requested them). `message_sender_id` is the message's sender's Verum ID, of the form _user_@_node_. `message_timestamp` is the timestamp of when the Node received the message. `message_sender_pubkey` is the public key of the message sender, used for verifying the signature of the encrypted message data -- be aware, however, that this may be `null` if the public key could not be retrieved.
 
 Unverified signatures on messages, or unsigned messages, should usually be treated as spam, as they may be spoofed `from` headers!
+
+#### **ADDED IN 1.2.0** `message_decrypted => plaintext_message_data, message_sender_id, message_timestamp, message_signature_valid`
+
+This Event is raised once a message has been decrypted, should a Secret Key have been provided in `Client.getEncMsgs()`, and is quite similar to the `message` event, with two key differences:
+
+- the first parameter contains the decrypted plaintext message data, **NOT** the encrypted ASCII armored data, and
+- the fourth parameter contains a Boolean value describing whether the sender's signature was valid / could be verified, **NOT** the sender's public key.
+
+_(this variation to the `Client.getEncMsgs()` function was completed for development convenience.)_

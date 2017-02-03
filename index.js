@@ -298,7 +298,7 @@ class Client {
     });
     this.getPubKey(recipient);
   }
-  getEncMsgs (username, password) {
+  getEncMsgs (username, password, secretKey=null) {
     var that = this;
     this.Events.on('messages_recv', function gotEncMsgs (messages) {
       messages.forEach((message, index) => {
@@ -322,7 +322,22 @@ class Client {
           senderSrvClient.getPubKey(message.sender.split("@")[0]);
         });
         function next () {
-          that.Events.emit("message", message.message.data, message.sender, message.timestamp, senderPubKey); // we aren't gonna handle decryption; that should definitely be done by the client in question.
+          that.Events.emit("message", message.message.data, message.sender, message.timestamp, senderPubKey); // in case we weren't given the secret key, or the client wants to get the encrypted data anyway.
+
+          if(secretKey !== null){
+            var options = {
+              message: pgp.message.readArmored(message.message.data),
+              privateKey: pgp.key.readArmored(secretKey).keys[0]
+            }
+
+            if(senderPubKey !== null)
+              options.publicKeys = pgp.key.readArmored(senderPubKey).keys;
+
+            pgp.decrypt(options).then(function(decrypted){
+              that.Events.emit("message_decrypted", decrypted.data, message.sender, message.timestamp, decrypted.signatures[0].valid);
+            });
+          }
+
           senderSrvClient = undefined;
         }
       });
