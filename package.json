@@ -1,6 +1,6 @@
 {
   "name": "verum",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "A module for client / server / p2p encrypted super-secret communication.",
   "main": "index.js",
   "scripts": {
