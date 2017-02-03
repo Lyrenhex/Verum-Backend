@@ -40,6 +40,7 @@ class Server {
     }
     this.Config = config;
     this.Config.port = port;
+    port, config = undefined;
     this.Users = {};
     var that = this;
     this.saveData = function() {
@@ -48,15 +49,11 @@ class Server {
       fs.writeFile("users.json", json, (err) => {
         if (err)
           console.log("Unable to save users.json: ", err);
-        else
-          console.log("Saved user data.");
       });
       var confJson = JSON.stringify(that.Config, null, 2);
       fs.writeFile("conf.json", confJson, (err) => {
         if (err)
           console.log("Unable to save conf.json: ", err);
-        else
-          console.log("Saved config data.");
       });
     }
     fs.readFile ("users.json", (err, data) => {
@@ -71,17 +68,15 @@ class Server {
         }
       }
 
-      setInterval(that.saveData, 300000); // save user data persistently every five minutes.
+      setInterval(that.saveData, 1800000); // save user data persistently every half-hour.
     });
 
     this.websock = ws.createServer(function(conn){
-      console.log("Recorded new connection.");
       conn.sendText(that.respond("welcome", that.Config.source));
       conn.on("text", function(str){
         // received JSON text string (assumedly). try to parse it, to determine the point of it.
         try {
           var json = JSON.parse(str);
-          console.log("Received: ", json);
           switch(json.type){
             case "get_pubkey":
               try {
@@ -170,9 +165,6 @@ class Server {
           console.log(e);
           conn.sendText(that.error("Bad Format", "Unable to parse malformed JSON."));
         }
-      });
-      conn.on("close", function(code, reason){
-        console.log("Connection closed.");
       });
     });
   }
