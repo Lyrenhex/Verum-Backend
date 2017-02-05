@@ -339,7 +339,7 @@ class Client {
               options.publicKeys = pgp.key.readArmored(senderPubKey).keys;
 
             pgp.decrypt(options).then(function(decrypted){
-              that.Events.emit("message_decrypted", decrypted.data, message.sender, message.timestamp, if(decrypted.signatures[0] !== undefined) ? decrypted.signatures[0].valid : false);
+              that.Events.emit("message_decrypted", decrypted.data, message.sender, message.timestamp, (decrypted.signatures[0] !== undefined) ? decrypted.signatures[0].valid : false);
             });
           }
 
