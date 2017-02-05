@@ -216,7 +216,6 @@ class Client {
     this.lastPubKeyRequestee;
 
     this.websock = ws.connect(`ws://${nodeAddr}:${nodePort}`);
-    console.log(this.websock);
     this.websock.on("text", function(str){
       var json = JSON.parse(str);
       switch(json.type){
@@ -311,7 +310,6 @@ class Client {
       messages.forEach((message, index) => {
         var senderPubKey = null;
         var senderNode = message.sender.split("@")[1].split(":");
-        console.log(senderNode);
         var senderSrvClient = new Client(senderNode[0], (senderNode[1] !== undefined) ? senderNode[1] : null); // create a client connection to the sender's Node.
         senderSrvClient.Events.on('public_key', function (user, key) {
           if(user === message.sender.split("@")[0]){
@@ -341,7 +339,7 @@ class Client {
               options.publicKeys = pgp.key.readArmored(senderPubKey).keys;
 
             pgp.decrypt(options).then(function(decrypted){
-              that.Events.emit("message_decrypted", decrypted.data, message.sender, message.timestamp, decrypted.signatures[0].valid);
+              that.Events.emit("message_decrypted", decrypted.data, message.sender, message.timestamp, if(decrypted.signatures[0] !== undefined) ? decrypted.signatures[0].valid : false);
             });
           }
 
