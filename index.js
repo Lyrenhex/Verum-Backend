@@ -237,6 +237,9 @@ class Client {
         case "messages":
           that.Events.emit("messages_recv", json.data);
           break;
+        case "updated":
+          that.Events.emit("public_key_updated", json.data);
+          break;
       }
     });
   }
@@ -347,6 +350,7 @@ class Client {
         }
       });
       that.gotMessages(username, password);
+      that.Events.emit("message_buffer_emptied");
     });
     this.getMessages(username, password);
   }
