@@ -16,11 +16,19 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-const pgp = require("openpgp");
-const ws = require("nodejs-websocket");
-const fs = require("fs");
-const eventEmitter = require("events");
-const passhash = require("password-hash");
+// CLIENT MODULES
+const pgp = require("openpgp"); // encryption - not touched on server
+const eventEmitter = require("events"); // asynchronous client interface
+const cryptojs = require("crypto-js"); // fingerprint generation
+const sha3 = cryptojs.SHA3;
+const hex = cryptojs.enc.Hex;
+
+// SERVER MODULES
+const fs = require("fs"); // handle file-based stuff (saving, etc)
+const passhash = require("password-hash"); // don't store plaintext passwords
+
+// MODULES FOR BOTH
+const ws = require("nodejs-websocket"); // client-server comms is websockets
 
 pgp.config.aead_protect = true;
 
@@ -203,6 +211,9 @@ class Server {
 Client Stuff
 */
 class Client {
+  /*
+  Construct a Client class. This requires the address of the user's Node, with  an optional port provided. nodePort defaults to 9873 should `null` (or any falsey value) be provided, or if not specified.
+  */
   constructor (nodeAddr, nodePort=null) {
     if (!nodePort)
       nodePort = 9873;
@@ -245,6 +256,9 @@ class Client {
   }
 
   register (username, password, publicKey) {
+    if (publicKey instanceof Key)
+      publicKey = publicKey.key;
+
     this.websock.sendText(JSON.stringify({
       type: "user_register",
       user: username,
@@ -253,6 +267,9 @@ class Client {
     }));
   }
   updatePubKey (username, password, publicKey) {
+    if (publicKey instanceof Key)
+      publicKey = publicKey.key;
+
     this.websock.sendText(JSON.stringify({
       type: "user_update_key",
       user: username,
@@ -285,6 +302,10 @@ class Client {
 
   sendEncMsg (recipient, message, from, secretKey) {
     var that = this;
+
+    if (secretKey instanceof Key)
+      secretKey = secretKey.key;
+
     this.Events.on('public_key', function sendEncMsg2 (user, key) {
       if(user === recipient){
         var options = {
@@ -333,6 +354,9 @@ class Client {
           that.Events.emit("message", message.message.data, message.sender, message.timestamp, senderPubKey); // in case we weren't given the secret key, or the client wants to get the encrypted data anyway.
 
           if(secretKey !== null){
+            if (secretKey instanceof Key)
+              secretKey = secretKey.key;
+
             var options = {
               message: pgp.message.readArmored(message.message.data),
               privateKey: pgp.key.readArmored(secretKey).keys[0]
@@ -356,6 +380,18 @@ class Client {
   }
 }
 
+class Key {
+  /*
+  Split key handling off into a separate class, noting fingerprinting etc that may need to be done.
+  */
+  constructor (key) {
+    this.key = key;
+    this.fingerprint = hex.stringify(sha3(key));
+  }
+}
+
 // make the Client and Server objects publicly accessible.
 exports.Client = Client;
+exports.Client.Key = Key;
+exports.Key = Key;
 exports.Server = Server;
