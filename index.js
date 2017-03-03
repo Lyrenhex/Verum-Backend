@@ -51,6 +51,8 @@ class Server {
     this.Config.port = port;
     port, config = undefined;
     this.Users = {};
+    this.LoggedInUsers = {};
+    this.LoggedInConns = {};
     var that = this;
     this.saveData = function() {
       var json = JSON.stringify(that.Users, null, 2);
@@ -88,11 +90,52 @@ class Server {
 
     this.websock = ws.createServer(function(conn){
       conn.sendText(that.respond("welcome", that.Config.source));
+      conn.on("close", (code, reason) => {
+        if (that.LoggedInConns[conn] !== undefined) {
+          that.LoggedInUsers[that.LoggedInConns[conn].user] = undefined;
+          that.LoggedInConns[conn] = undefined;
+        }
+      });
       conn.on("text", function(str){
         // received JSON text string (assumedly). try to parse it, to determine the point of it.
         try {
           var json = JSON.parse(str);
+          if (that.LoggedInConns[conn] !== undefined) { // if the user is keepauth
+            // we need to imitate them NOT being keepauth, for ease's sake, for commands that need it :>
+            var authCommands = [
+              "user_update_password",
+              "user_update_key",
+              "messages_get",
+              "messages_got"
+            ]
+            if (authCommands.contains(json.type)) { // if they've entered an auth command
+              // populate the values
+              json.user = that.LoggedInConns[conn].user;
+              json.pass = that.LoggedInConns[conn].pass;
+              if (json.type === "user_update_password") {
+                json.oldPass = json.pass;
+              }
+            }
+          }
           switch(json.type){
+            case "keepauth":
+              if(that.Users.hasOwnProperty(json.user)) {
+                if(passhash.verify(json.pass, that.Users[json.user].password)) {
+                  var authData = {
+                    conn: conn,
+                    user: json.user,
+                    pass: json.pass
+                  }
+                  that.LoggedInConns[conn] = authData;
+                  that.LoggedInUsers[json.user] = authData;
+                  conn.sendText(that.respond("keepauth", "Successfully activated keepauth mode. Username and passwords no longer need providing for this session, and messages will be auto-forwarded to you."));
+                } else {
+                  conn.sendText(that.error("Incorrect Password", "The password provided to authenticate the requested operation does not match the password tied to this account. The operation was not completed."));
+                }
+              } else {
+                conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
+              }
+              break;
             case "get_pubkey":
               try {
                 conn.sendText(that.respond("public_key", that.Users[json.user].pubkey));
@@ -158,7 +201,14 @@ class Server {
                   sender: json.from,
                   timestamp: time
                 });
+                if (that.LoggedInUsers[json.user] !== undefined) { // recipient is keepauth
+                  try {
+                    that.LoggedInUsers[json.user].conn.sendText(
+                      that.respond("messages", that.Users[json.user].messages));
+                  } catch (e) { }
+                }
                 conn.sendText(that.respond("sent", "Message sent successfully."));
+                that.saveData();
               }else{
                 conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
               }
