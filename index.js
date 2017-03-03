@@ -126,6 +126,18 @@ class Server {
                 conn.sendText(that.error("Private Node", "This Node has been configured to not be public, meaning that it is not accepting user registrations. Perhaps try join a different Node?"));
               }
               break;
+            case "user_update_password":
+              if(that.Users.hasOwnProperty(json.user)) {
+                if(passhash.verify(json.oldPass, that.Users[json.user].password)) {
+                  that.Users[json.user].password = passhash.generate(json.newPass);
+                  conn.sendText(that.respond("updated", "Successfully updated password."));
+                } else {
+                  conn.sendText(that.error("Incorrect Password", "The password provided to authenticate the requested operation does not match the password tied to this account. The operation was not completed."));
+                }
+              } else {
+                conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
+              }
+              break;
             case "user_update_key":
               if(that.Users.hasOwnProperty(json.user)) {
                 if(passhash.verify(json.pass, that.Users[json.user].password)){
@@ -249,7 +261,7 @@ class Client {
           that.Events.emit("messages_recv", json.data);
           break;
         case "updated":
-          that.Events.emit("public_key_updated", json.data);
+          that.Events.emit("user_data_updated", json.data);
           break;
       }
     });
@@ -275,6 +287,14 @@ class Client {
       user: username,
       pubkey: publicKey,
       pass: password
+    }));
+  }
+  updatePassword (username, oldPassword, newPassword) {
+    this.websock.sendText(JSON.stringify({
+      type: "user_update_password",
+      user: username,
+      oldPass: oldPassword,
+      newPass: newPassword
     }));
   }
   getMessages (username, password) {
