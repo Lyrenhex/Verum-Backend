@@ -75,7 +75,7 @@ client.Events.on('message', (ciphertext, from, timestamp, pubKey) => {
 });
 client.Events.on('welcome', (address) => {
   console.log("Node source: ", address);
-  client.sendEncMsg("Scratso", "Testing Message. This is probably automatically sent by Travis CI.", "travis-ci@devel.node.verum.damianheaton.com");
+  client.sendEncMsg("Scratso", "Testing Message. This is probably automatically sent by Travis CI.", "travis-ci@node.verum.damianheaton.com");
   setTimeout(function(){
     client.getEncMsgs(USERNAME, PASSWORD)
   }, 5000);
