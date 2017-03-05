@@ -88,7 +88,7 @@ client.Events.on('registered', (welcome) => {
 });
 client.Events.on('error', (err, ext) => {
   console.log("ERROR", err, ext);
-  if (err === "Unknown User"){
+  if (err === "User Doesn't Exist"){
     client.register (USERNAME, PASSWORD, pubKey);
   } else if (err == "User Missing Public Key") {
     client.updatePubKey (USERNAME, PASSWORD, pubKey);
