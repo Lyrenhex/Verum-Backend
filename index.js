@@ -460,6 +460,139 @@ class Key {
   }
 }
 
+class Auto {
+  constructor (username, password, nodeAddr, nodePort=9873) {
+    this.Client = new Client (nodeAddr, nodePort);
+    this.Client.on ("welcome", msg => {
+      this.Client.websock.sendText(JSON.stringify({
+        type: "keepauth",
+        user: username,
+        pass: password
+      }));
+    });
+
+    this.websock = this.Client.websock;
+    this.Events = this.Client.Events;
+  }
+
+  updatePubKey (publicKey) {
+    if (publicKey instanceof Key)
+      publicKey = publicKey.key;
+
+    this.websock.sendText(JSON.stringify({
+      type: "user_update_key",
+      pubkey: publicKey,
+    }));
+  }
+  updatePassword (newPassword) {
+    this.websock.sendText(JSON.stringify({
+      type: "user_update_password",
+      newPass: newPassword
+    }));
+  }
+  getMessages () {
+    this.websock.sendText(JSON.stringify({
+      type: "messages_get"
+    }));
+  }
+  gotMessages () {
+    this.websock.sendText(JSON.stringify({
+      type: "messages_got"
+    }));
+  }
+
+  getPubKey (requestee) {
+    this.lastPubKeyRequestee = requestee;
+    this.websock.sendText(JSON.stringify({
+      type: "get_pubkey",
+      user: requestee
+    }));
+  }
+
+  sendEncMsg (recipient, message, from, secretKey) {
+    var that = this;
+
+    if (secretKey instanceof Key)
+      secretKey = secretKey.key;
+
+    this.Events.on('public_key', function sendEncMsg2 (user, key) {
+      if(user === recipient){
+        var options = {
+          data: message,
+          publicKeys: pgp.key.readArmored(key).keys,
+          privateKeys: pgp.key.readArmored(secretKey).keys // we must sign the message, to prove to the recipient that this was sent by me and not an impostor.
+        }
+
+        console.log("Encrypting message...");
+        pgp.encrypt(options).then(function(ciphertext){
+          that.websock.sendText(JSON.stringify({
+            type: "message_send",
+            user: recipient,
+            msg: ciphertext,
+            from: from
+          }));
+          that.Events.removeListener('public_key', sendEncMsg2); // listener's served its purpose; destroy it.
+        });
+      }
+    });
+    this.getPubKey(recipient);
+  }
+  getEncMsgs (secretKey=null) {
+    var that = this;
+    this.Events.on('messages_recv', function gotEncMsgs (messages) {
+      messages.forEach((message, index) => {
+        var senderPubKey = null;
+        var senderNode = message.sender.split("@")[1].split(":");
+        var senderSrvClient = new Client(senderNode[0], (senderNode[1] !== undefined) ? senderNode[1] : null); // create a client connection to the sender's Node.
+        senderSrvClient.Events.on('public_key', function (user, key) {
+          if(user === message.sender.split("@")[0]){
+            senderPubKey = key;
+            next();
+          }
+        });
+        senderSrvClient.Events.on('error', function(err, ext){
+          if (err === "Unknown User") {
+            console.log(err, ext, "As the identity could not be verified, this may well be spam.");
+          }
+          next();
+        });
+        senderSrvClient.Events.on('welcome', function (address){
+          senderSrvClient.getPubKey(message.sender.split("@")[0]);
+        });
+        function next () {
+          that.Events.emit("message", message.message.data, message.sender, message.timestamp, senderPubKey); // in case we weren't given the secret key, or the client wants to get the encrypted data anyway.
+
+          if(secretKey !== null){
+            if (secretKey instanceof Key)
+              secretKey = secretKey.key;
+
+            var options = {
+              message: pgp.message.readArmored(message.message.data),
+              privateKey: pgp.key.readArmored(secretKey).keys[0]
+            }
+
+            if(senderPubKey !== null)
+              options.publicKeys = pgp.key.readArmored(senderPubKey).keys;
+
+            pgp.decrypt(options).then(function(decrypted){
+              that.Events.emit("message_decrypted", decrypted.data, message.sender, message.timestamp, (decrypted.signatures[0] !== undefined) ? decrypted.signatures[0].valid : false);
+            });
+          }
+
+          senderSrvClient = undefined;
+        }
+      });
+      that.gotMessages();
+      that.Events.emit("message_buffer_emptied");
+    });
+    this.getMessages();
+  }
+
+  kill () {
+    this.Client.websock.close();
+  }
+}
+
 // make the Client and Server objects publicly accessible.
 exports.Client = Client;
 exports.Client.Key = Key;
