@@ -51,6 +51,8 @@ class Server {
     this.Config.port = port;
     port, config = undefined;
     this.Users = {};
+    this.LoggedInUsers = {};
+    this.LoggedInConns = {};
     var that = this;
     this.saveData = function() {
       var json = JSON.stringify(that.Users, null, 2);
@@ -88,11 +90,52 @@ class Server {
 
     this.websock = ws.createServer(function(conn){
       conn.sendText(that.respond("welcome", that.Config.source));
+      conn.on("close", (code, reason) => {
+        if (that.LoggedInConns[conn] !== undefined) {
+          that.LoggedInUsers[that.LoggedInConns[conn].user] = undefined;
+          that.LoggedInConns[conn] = undefined;
+        }
+      });
       conn.on("text", function(str){
         // received JSON text string (assumedly). try to parse it, to determine the point of it.
         try {
           var json = JSON.parse(str);
+          if (that.LoggedInConns[conn] !== undefined) { // if the user is keepauth
+            // we need to imitate them NOT being keepauth, for ease's sake, for commands that need it :>
+            var authCommands = [
+              "user_update_password",
+              "user_update_key",
+              "messages_get",
+              "messages_got"
+            ]
+            if (authCommands.contains(json.type)) { // if they've entered an auth command
+              // populate the values
+              json.user = that.LoggedInConns[conn].user;
+              json.pass = that.LoggedInConns[conn].pass;
+              if (json.type === "user_update_password") {
+                json.oldPass = json.pass;
+              }
+            }
+          }
           switch(json.type){
+            case "keepauth":
+              if(that.Users.hasOwnProperty(json.user)) {
+                if(passhash.verify(json.pass, that.Users[json.user].password)) {
+                  var authData = {
+                    conn: conn,
+                    user: json.user,
+                    pass: json.pass
+                  }
+                  that.LoggedInConns[conn] = authData;
+                  that.LoggedInUsers[json.user] = authData;
+                  conn.sendText(that.respond("keepauth", "Successfully activated keepauth mode. Username and passwords no longer need providing for this session, and messages will be auto-forwarded to you."));
+                } else {
+                  conn.sendText(that.error("Incorrect Password", "The password provided to authenticate the requested operation does not match the password tied to this account. The operation was not completed."));
+                }
+              } else {
+                conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
+              }
+              break;
             case "get_pubkey":
               try {
                 conn.sendText(that.respond("public_key", that.Users[json.user].pubkey));
@@ -126,6 +169,18 @@ class Server {
                 conn.sendText(that.error("Private Node", "This Node has been configured to not be public, meaning that it is not accepting user registrations. Perhaps try join a different Node?"));
               }
               break;
+            case "user_update_password":
+              if(that.Users.hasOwnProperty(json.user)) {
+                if(passhash.verify(json.oldPass, that.Users[json.user].password)) {
+                  that.Users[json.user].password = passhash.generate(json.newPass);
+                  conn.sendText(that.respond("updated", "Successfully updated password."));
+                } else {
+                  conn.sendText(that.error("Incorrect Password", "The password provided to authenticate the requested operation does not match the password tied to this account. The operation was not completed."));
+                }
+              } else {
+                conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
+              }
+              break;
             case "user_update_key":
               if(that.Users.hasOwnProperty(json.user)) {
                 if(passhash.verify(json.pass, that.Users[json.user].password)){
@@ -146,7 +201,14 @@ class Server {
                   sender: json.from,
                   timestamp: time
                 });
+                if (that.LoggedInUsers[json.user] !== undefined) { // recipient is keepauth
+                  try {
+                    that.LoggedInUsers[json.user].conn.sendText(
+                      that.respond("messages", that.Users[json.user].messages));
+                  } catch (e) { }
+                }
                 conn.sendText(that.respond("sent", "Message sent successfully."));
+                that.saveData();
               }else{
                 conn.sendText(that.error("User Doesn't Exist", "A user with that name wasn't found on this Node. Are you sure you're querying the right Node?"));
               }
@@ -249,7 +311,7 @@ class Client {
           that.Events.emit("messages_recv", json.data);
           break;
         case "updated":
-          that.Events.emit("public_key_updated", json.data);
+          that.Events.emit("user_data_updated", json.data);
           break;
       }
     });
@@ -275,6 +337,14 @@ class Client {
       user: username,
       pubkey: publicKey,
       pass: password
+    }));
+  }
+  updatePassword (username, oldPassword, newPassword) {
+    this.websock.sendText(JSON.stringify({
+      type: "user_update_password",
+      user: username,
+      oldPass: oldPassword,
+      newPass: newPassword
     }));
   }
   getMessages (username, password) {
@@ -387,6 +457,139 @@ class Key {
   constructor (key) {
     this.key = key;
     this.fingerprint = hex.stringify(sha3(key));
+  }
+}
+
+class Auto {
+  constructor (username, password, nodeAddr, nodePort=9873) {
+    this.Client = new Client (nodeAddr, nodePort);
+    this.Client.on ("welcome", msg => {
+      this.Client.websock.sendText(JSON.stringify({
+        type: "keepauth",
+        user: username,
+        pass: password
+      }));
+    });
+
+    this.websock = this.Client.websock;
+    this.Events = this.Client.Events;
+  }
+
+  updatePubKey (publicKey) {
+    if (publicKey instanceof Key)
+      publicKey = publicKey.key;
+
+    this.websock.sendText(JSON.stringify({
+      type: "user_update_key",
+      pubkey: publicKey,
+    }));
+  }
+  updatePassword (newPassword) {
+    this.websock.sendText(JSON.stringify({
+      type: "user_update_password",
+      newPass: newPassword
+    }));
+  }
+  getMessages () {
+    this.websock.sendText(JSON.stringify({
+      type: "messages_get"
+    }));
+  }
+  gotMessages () {
+    this.websock.sendText(JSON.stringify({
+      type: "messages_got"
+    }));
+  }
+
+  getPubKey (requestee) {
+    this.lastPubKeyRequestee = requestee;
+    this.websock.sendText(JSON.stringify({
+      type: "get_pubkey",
+      user: requestee
+    }));
+  }
+
+  sendEncMsg (recipient, message, from, secretKey) {
+    var that = this;
+
+    if (secretKey instanceof Key)
+      secretKey = secretKey.key;
+
+    this.Events.on('public_key', function sendEncMsg2 (user, key) {
+      if(user === recipient){
+        var options = {
+          data: message,
+          publicKeys: pgp.key.readArmored(key).keys,
+          privateKeys: pgp.key.readArmored(secretKey).keys // we must sign the message, to prove to the recipient that this was sent by me and not an impostor.
+        }
+
+        console.log("Encrypting message...");
+        pgp.encrypt(options).then(function(ciphertext){
+          that.websock.sendText(JSON.stringify({
+            type: "message_send",
+            user: recipient,
+            msg: ciphertext,
+            from: from
+          }));
+          that.Events.removeListener('public_key', sendEncMsg2); // listener's served its purpose; destroy it.
+        });
+      }
+    });
+    this.getPubKey(recipient);
+  }
+  getEncMsgs (secretKey=null) {
+    var that = this;
+    this.Events.on('messages_recv', function gotEncMsgs (messages) {
+      messages.forEach((message, index) => {
+        var senderPubKey = null;
+        var senderNode = message.sender.split("@")[1].split(":");
+        var senderSrvClient = new Client(senderNode[0], (senderNode[1] !== undefined) ? senderNode[1] : null); // create a client connection to the sender's Node.
+        senderSrvClient.Events.on('public_key', function (user, key) {
+          if(user === message.sender.split("@")[0]){
+            senderPubKey = key;
+            next();
+          }
+        });
+        senderSrvClient.Events.on('error', function(err, ext){
+          if (err === "Unknown User") {
+            console.log(err, ext, "As the identity could not be verified, this may well be spam.");
+          }
+          next();
+        });
+        senderSrvClient.Events.on('welcome', function (address){
+          senderSrvClient.getPubKey(message.sender.split("@")[0]);
+        });
+        function next () {
+          that.Events.emit("message", message.message.data, message.sender, message.timestamp, senderPubKey); // in case we weren't given the secret key, or the client wants to get the encrypted data anyway.
+
+          if(secretKey !== null){
+            if (secretKey instanceof Key)
+              secretKey = secretKey.key;
+
+            var options = {
+              message: pgp.message.readArmored(message.message.data),
+              privateKey: pgp.key.readArmored(secretKey).keys[0]
+            }
+
+            if(senderPubKey !== null)
+              options.publicKeys = pgp.key.readArmored(senderPubKey).keys;
+
+            pgp.decrypt(options).then(function(decrypted){
+              that.Events.emit("message_decrypted", decrypted.data, message.sender, message.timestamp, (decrypted.signatures[0] !== undefined) ? decrypted.signatures[0].valid : false);
+            });
+          }
+
+          senderSrvClient = undefined;
+        }
+      });
+      that.gotMessages();
+      that.Events.emit("message_buffer_emptied");
+    });
+    this.getMessages();
+  }
+
+  kill () {
+    this.Client.websock.close();
   }
 }
 
