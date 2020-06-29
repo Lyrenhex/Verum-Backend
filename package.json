@@ -27,7 +27,7 @@
   "dependencies": {
     "crypto-js": "^3.1.9-1",
     "nodejs-websocket": "^1.7.1",
-    "openpgp": "^2.3.5",
+    "openpgp": "^4.10.4",
     "password-hash": "^1.2.2"
   }
 }
